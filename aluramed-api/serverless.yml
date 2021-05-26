@@ -1,0 +1,108 @@
+service: alura-med-api
+
+plugins:
+  - serverless-dynamodb-local
+  - serverless-offline
+
+custom:
+  dynamodb:
+    stages:
+      - dev
+    start:
+      port: 8000
+      inMemory: true
+      heapInitial: 200m
+      heapMax: 1g
+      migrate: true
+      seed: true
+      convertEmptyValues: true
+    seed:
+      domain:
+        sources:
+          - table: ${self:provider.environment.PACIENTES_TABLE}
+            sources: [./offline/migrations/pacientes-seed.json]
+  serverless-offline:
+    httpPort: 3001     
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+
+  # you can overwrite defaults here
+  stage: dev
+  region: us-east-1
+  apiGateway:
+    shouldStartNameWithService: true
+  lambdaHashingVersion: 20201221
+  environment:
+   PACIENTES_TABLE: 'PACIENTES_${opt:stage, self:provider.stage}'
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:PutItem
+            - dynamodb:DeleteItem
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+          Resource: 'arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.PACIENTES_TABLE}'
+
+functions:
+
+  listarPacientes:
+    handler: src/pacientes.listar
+    events:
+      - http:
+          path: pacientes
+          method: get
+
+  obterPaciente:
+    handler: src/pacientes.obter
+    events:
+      - http:
+          path: pacientes/{pacienteId}
+          method: get
+
+  cadastrarPaciente:
+    handler: src/pacientes.cadastrar
+    events:
+      - http:
+          path: pacientes
+          method: post
+
+  atualizarPaciente:
+    handler: src/pacientes.atualizar
+    events:
+      - http:
+          path: pacientes/{pacienteId}
+          method: put
+          
+  excluirPaciente:
+    handler: src/pacientes.excluir
+    events:
+      - http:
+          path: pacientes/{pacienteId}
+          method: delete
+
+resources:
+  Resources:
+    PacientesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.PACIENTES_TABLE}
+        AttributeDefinitions:
+          - AttributeName: usuario_id
+            AttributeType: S
+          - AttributeName: paciente_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: usuario_id
+            KeyType: HASH
+          - AttributeName: paciente_id
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1   

@@ -1,0 +1,22 @@
+{
+  "name": "alura-med-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "handler.js",
+  "dependencies": {
+    "aws-sdk": "^2.740.0",
+    "uuid": "^8.3.0"
+  },
+  "devDependencies": {
+    "faker": "^5.1.0",
+    "serverless-dynamodb-local": "^0.2.39",
+    "serverless-offline": "^6.8.0"
+  },
+  "scripts": {
+    "test": "mocha",
+    "fixtures": "./bin/fixtures"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
