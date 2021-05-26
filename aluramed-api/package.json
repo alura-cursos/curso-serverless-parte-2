@@ -5,6 +5,7 @@
   "main": "handler.js",
   "dependencies": {
     "aws-sdk": "^2.740.0",
+    "serverless-domain-manager": "^5.1.0",
     "uuid": "^8.3.0"
   },
   "devDependencies": {

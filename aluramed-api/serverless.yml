@@ -3,8 +3,15 @@ service: alura-med-api
 plugins:
   - serverless-dynamodb-local
   - serverless-offline
+  - serverless-domain-manager
 
 custom:
+  customDomain:
+    domainName: api.aluramed.xyz
+    basePath: 'v1'
+    stage: ${self:provider.stage}
+    createRoute53Record: true
+    certificateName: aluramed.xyz
   dynamodb:
     stages:
       - dev
