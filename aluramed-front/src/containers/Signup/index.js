@@ -36,6 +36,28 @@ export default function Signup() {
     event.preventDefault();
 
     setIsLoading(true);
+
+    try {
+      const novoUsuario = await Auth.signUp({
+        username: fields.email,
+        password: fields.password,
+        attributes: {
+          name: fields.name
+        }
+      });
+
+      setIsLoading(false);
+      setNewUser(novoUsuario);
+    } catch (e) {
+      if (e.code == "UsernameExistsException") {
+        const retentativa = await Auth.resendSignUp(fields.email);
+        setNewUser({
+          newUser: retentativa
+        });
+      } else {
+        onError(e);
+      }
+    }
   }
 
   async function handleConfirmationSubmit(event) {
@@ -43,9 +65,19 @@ export default function Signup() {
 
     setIsLoading(true);
 
-    userHasAuthenticated(true);
+    try {
+      await Auth.confirmSignUp(fields.email, fields.confirmationCode);
+      await Auth.signIn(fields.email, fields.password);
 
-    history.push("/")
+      userHasAuthenticated(true);
+
+      history.push("/");
+    } catch (e) {
+      onError(e);
+
+    }
+
+    setIsLoading(false);
   }
 
   function renderConfirmationForm() {

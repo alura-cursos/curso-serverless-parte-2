@@ -5,6 +5,7 @@ import { LinkContainer } from "react-router-bootstrap";
 import { useHistory } from "react-router-dom";
 import { MdLocalHospital } from "react-icons/md";
 import { FaUsers } from "react-icons/fa";
+import { Auth } from "aws-amplify";
 import { AppContext } from "./libs/contextLib";
 import { onError } from "./libs/errorLib";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -22,10 +23,27 @@ function App() {
   }, []);
 
   async function onLoad() {
+
+    try {
+      await Auth.currentSession();
+      const { attributes } = await Auth.currentAuthenticatedUser();
+
+      setCurrentUser(attributes);
+      userHasAuthenticated(true);
+    } catch (e) {
+      if (e != "No current user") {
+        alert(e);
+      }
+    }
+
     setIsAuthenticating(false);
   }
 
   async function handleLogout() {
+    await Auth.signOut();
+
+    userHasAuthenticated(false);
+
     history.push("/login");
   }
 
