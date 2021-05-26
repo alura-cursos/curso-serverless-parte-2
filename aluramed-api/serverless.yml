@@ -58,6 +58,7 @@ functions:
       - http:
           path: pacientes
           method: get
+          authorizer: aws_iam
 
   obterPaciente:
     handler: src/pacientes.obter
@@ -65,6 +66,7 @@ functions:
       - http:
           path: pacientes/{pacienteId}
           method: get
+          authorizer: aws_iam
 
   cadastrarPaciente:
     handler: src/pacientes.cadastrar
@@ -72,6 +74,7 @@ functions:
       - http:
           path: pacientes
           method: post
+          authorizer: aws_iam
 
   atualizarPaciente:
     handler: src/pacientes.atualizar
@@ -79,6 +82,7 @@ functions:
       - http:
           path: pacientes/{pacienteId}
           method: put
+          authorizer: aws_iam
           
   excluirPaciente:
     handler: src/pacientes.excluir
@@ -86,6 +90,7 @@ functions:
       - http:
           path: pacientes/{pacienteId}
           method: delete
+          authorizer: aws_iam
 
 resources:
   Resources:
@@ -105,4 +110,140 @@ resources:
             KeyType: RANGE
         ProvisionedThroughput:
           ReadCapacityUnits: 1
-          WriteCapacityUnits: 1   
+          WriteCapacityUnits: 1
+
+    UserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UsernameConfiguration: 
+          CaseSensitive: false
+        AutoVerifiedAttributes:
+          - email
+        UsernameAttributes:
+          - email
+        UserPoolName: alura-med-user-pool-${opt:stage, self:provider.stage}
+        Schema:
+          - Name: email
+            AttributeDataType: String
+            Mutable: false
+            Required: true
+          - Name: name
+            AttributeDataType: String
+            Mutable: true
+            Required: true
+
+    UserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        UserPoolId: !Ref UserPool
+        AllowedOAuthFlowsUserPoolClient: true
+        CallbackURLs:
+          - http://localhost:3001
+        AllowedOAuthFlows:
+          - code
+          - implicit
+        AllowedOAuthScopes:
+          - phone
+          - email
+          - openid
+          - profile
+        SupportedIdentityProviders:
+          - COGNITO
+        ExplicitAuthFlows:
+          - ALLOW_ADMIN_USER_PASSWORD_AUTH
+          - ALLOW_CUSTOM_AUTH
+          - ALLOW_USER_SRP_AUTH
+          - ALLOW_REFRESH_TOKEN_AUTH
+
+    UserPoolDomain:
+      Type: AWS::Cognito::UserPoolDomain
+      Properties:
+        Domain: alura-med-${opt:stage, self:provider.stage}
+        UserPoolId: !Ref UserPool
+      
+    # Creates a federeated Identity pool
+    IdentityPool:
+      Type: "AWS::Cognito::IdentityPool"
+      Properties:
+        IdentityPoolName: alura-med-identity-pool-${opt:stage, self:provider.stage}
+        AllowUnauthenticatedIdentities: true
+        CognitoIdentityProviders: 
+          - ClientId: !Ref UserPoolClient
+            ProviderName: !GetAtt UserPool.ProviderName
+
+    # Create a role for unauthorized acces to AWS resources. 
+    # Very limited access. Only allows users in the previously created Identity Pool
+    CognitoUnAuthorizedRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        AssumeRolePolicyDocument: 
+          Version: "2012-10-17"
+          Statement:
+            - Effect: "Allow"
+              Principal: 
+                Federated: "cognito-identity.amazonaws.com"
+              Action: 
+                - "sts:AssumeRoleWithWebIdentity"
+              Condition:
+                StringEquals: 
+                  "cognito-identity.amazonaws.com:aud": !Ref IdentityPool
+                "ForAnyValue:StringLike":
+                  "cognito-identity.amazonaws.com:amr": unauthenticated
+        Policies:
+          - PolicyName: "CognitoUnauthorizedPolicy"
+            PolicyDocument: 
+              Version: "2012-10-17"
+              Statement: 
+                - Effect: "Allow"
+                  Action:
+                    - "mobileanalytics:PutEvents"
+                    - "cognito-sync:*"
+                  Resource: "*"
+    # Create a role for authorized acces to AWS resources. 
+    # Control what your user can access. This example only allows Lambda invokation
+    # Only allows users in the previously created Identity Pool
+    CognitoAuthorizedRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        AssumeRolePolicyDocument: 
+          Version: "2012-10-17"
+          Statement:
+            - Effect: "Allow"
+              Principal: 
+                Federated: "cognito-identity.amazonaws.com"
+              Action: 
+                - "sts:AssumeRoleWithWebIdentity"
+              Condition:
+                StringEquals: 
+                  "cognito-identity.amazonaws.com:aud": !Ref IdentityPool
+                "ForAnyValue:StringLike":
+                  "cognito-identity.amazonaws.com:amr": authenticated
+        Policies:
+          - PolicyName: "CognitoAuthorizedPolicy"
+            PolicyDocument: 
+              Version: "2012-10-17"
+              Statement: 
+                - Effect: "Allow"
+                  Action:
+                    - "mobileanalytics:PutEvents"
+                    - "cognito-sync:*"
+                    - "cognito-identity:*"
+                  Resource: "*"
+                - Effect: "Allow"
+                  Action:
+                    - "execute-api:Invoke"
+                  Resource:
+                    Fn::Join:
+                      - ""
+                      - - "arn:aws:execute-api:${opt:region, self:provider.region}:*:"
+                        - Ref: ApiGatewayRestApi
+                        - "/*/*/*"
+  
+    # Assigns the roles to the Identity Pool
+    IdentityPoolRoleMapping:
+      Type: "AWS::Cognito::IdentityPoolRoleAttachment"
+      Properties:
+        IdentityPoolId: !Ref IdentityPool
+        Roles:
+          authenticated: !GetAtt CognitoAuthorizedRole.Arn
+          unauthenticated: !GetAtt CognitoUnAuthorizedRole.Arn
