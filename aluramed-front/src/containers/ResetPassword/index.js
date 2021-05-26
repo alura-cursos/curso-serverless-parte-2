@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-
 import { Link } from "react-router-dom";
-import { FormGroup, FormControl, FormLabel, FormText } from "react-bootstrap";
+import Form from "react-bootstrap/Form";
+import { Auth } from "aws-amplify";
 import LoaderButton from "../../components/LoaderButton";
 import { useFormFields } from "../../libs/hooksLib";
 import { onError } from "../../libs/errorLib";
@@ -18,101 +18,148 @@ export default function ResetPassword() {
   const [confirmed, setConfirmed] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
-
-  function validateCodeForm() {
-    return fields.email.length > 0;
-  }
+  const [validateCode, setValidateCode] = useState(false);
+  const [validateReset, setValidateReset] = useState(false);
 
   function validateResetForm() {
     return (
-      fields.code.length > 0 &&
-      fields.password.length > 0 &&
       fields.password === fields.confirmPassword
     );
   }
 
   async function handleSendCodeClick(event) {
-    event.preventDefault();
+    const form = event.currentTarget;
 
-    setIsSendingCode(true);
-    setCodeSent(true);
+    event.preventDefault();
+    event.stopPropagation();
+
+    setValidateCode(true);
+
+    if (form.checkValidity()) {
+      setIsSendingCode(true);
+
+      try {
+        await Auth.forgotPassword(fields.email);
+        setCodeSent(true);
+      } catch (error) {
+        onError(error);
+        setIsSendingCode(false);
+      }
+    }
   }
 
   async function handleConfirmClick(event) {
+    const form = event.currentTarget;
+
     event.preventDefault();
+    event.stopPropagation();
 
-    setIsConfirming(true);
+    setValidateReset(true);
 
-    setConfirmed(true);
+    if (form.checkValidity()) {
+      setIsConfirming(true);
+
+      try {
+        await Auth.forgotPasswordSubmit(
+          fields.email,
+          fields.code,
+          fields.password
+        );
+        setConfirmed(true);
+      } catch (error) {
+        onError(error);
+        setIsConfirming(false);
+      }
+    }
   }
 
   function renderRequestCodeForm() {
     return (
-      <form onSubmit={handleSendCodeClick}>
-        <FormGroup bsSize="large" controlId="email">
-          <FormLabel>E-mail</FormLabel>
-          <FormControl
+      <Form noValidate validated={validateCode} onSubmit={handleSendCodeClick}>
+        <Form.Group size="large" controlId="email">
+          <Form.Label>E-mail</Form.Label>
+          <Form.Control
+            required
             autoFocus
             type="email"
             value={fields.email}
             onChange={handleFieldChange}
           />
-        </FormGroup>
+          <Form.Control.Feedback type="invalid">
+            E-mail é obrigatório.
+          </Form.Control.Feedback>
+        </Form.Group>
         <LoaderButton
           block
           type="submit"
-          bsSize="large"
+          size="large"
           isLoading={isSendingCode}
-          disabled={!validateCodeForm()}
         >
           Enviar código
         </LoaderButton>
-      </form>
+      </Form>
     );
   }
 
   function renderConfirmationForm() {
     return (
-      <form onSubmit={handleConfirmClick}>
-        <FormGroup bsSize="large" controlId="code">
-          <FormLabel>Confirmation Code</FormLabel>
-          <FormControl
+      <Form noValidate validated={validateReset} onSubmit={handleConfirmClick}>
+        <Form.Group size="large" controlId="code">
+          <Form.Label>Código de confirmação</Form.Label>
+          <Form.Control
+            required
             autoFocus
-            type="tel"
+            type="text"
             value={fields.code}
             onChange={handleFieldChange}
           />
-          <FormText muted>
+          <Form.Text className="text-muted">
             O código de confirmação foi enviado para o e-mail cadastrado.
-          </FormText>
-        </FormGroup>
+          </Form.Text>
+          <Form.Control.Feedback type="invalid">
+            Código de confirmação é obrigatório.
+          </Form.Control.Feedback>
+        </Form.Group>
         <hr />
-        <FormGroup bsSize="large" controlId="password">
-          <FormLabel>Nova senha</FormLabel>
-          <FormControl
+        <Form.Group size="large" controlId="password">
+          <Form.Label>Nova senha</Form.Label>
+          <Form.Control
+            required
+            minLength={8}
             type="password"
             value={fields.password}
             onChange={handleFieldChange}
           />
-        </FormGroup>
-        <FormGroup bsSize="large" controlId="confirmPassword">
-          <FormLabel>Confirmar a senha</FormLabel>
-          <FormControl
+          <Form.Text className="text-muted">
+            A senha deve ser de no mínimo 8 caracterer e conter letras, números e caracteres especiais.
+          </Form.Text>
+          <Form.Control.Feedback type="invalid">
+            Nova senha é obrigatório.
+          </Form.Control.Feedback>
+        </Form.Group>
+        <Form.Group size="large" controlId="confirmPassword">
+          <Form.Label>Confirmar a senha</Form.Label>
+          <Form.Control
+            required
+            minLength={8}
             type="password"
             value={fields.confirmPassword}
             onChange={handleFieldChange}
           />
-        </FormGroup>
+          <Form.Control.Feedback type="invalid">
+            Confirmar senha é obrigatório.
+          </Form.Control.Feedback>
+        </Form.Group>
         <LoaderButton
           block
           type="submit"
-          bsSize="large"
+          size="large"
           isLoading={isConfirming}
           disabled={!validateResetForm()}
         >
-          Confirm
+          Confirmar
         </LoaderButton>
-      </form>
+      </Form>
     );
   }
 

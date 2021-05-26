@@ -59,6 +59,7 @@ functions:
           path: pacientes
           method: get
           authorizer: aws_iam
+          cors: true
 
   obterPaciente:
     handler: src/pacientes.obter
@@ -67,6 +68,7 @@ functions:
           path: pacientes/{pacienteId}
           method: get
           authorizer: aws_iam
+          cors: true
 
   cadastrarPaciente:
     handler: src/pacientes.cadastrar
@@ -75,6 +77,7 @@ functions:
           path: pacientes
           method: post
           authorizer: aws_iam
+          cors: true
 
   atualizarPaciente:
     handler: src/pacientes.atualizar
@@ -83,6 +86,7 @@ functions:
           path: pacientes/{pacienteId}
           method: put
           authorizer: aws_iam
+          cors: true
           
   excluirPaciente:
     handler: src/pacientes.excluir
@@ -91,6 +95,7 @@ functions:
           path: pacientes/{pacienteId}
           method: delete
           authorizer: aws_iam
+          cors: true
 
 resources:
   Resources:
@@ -246,4 +251,26 @@ resources:
         IdentityPoolId: !Ref IdentityPool
         Roles:
           authenticated: !GetAtt CognitoAuthorizedRole.Arn
-          unauthenticated: !GetAtt CognitoUnAuthorizedRole.Arn
+          unauthenticated: !GetAtt CognitoUnAuthorizedRole.Arn   
+    
+    # API Gateway Errors
+    GatewayResponseDefault4XX:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        ResponseParameters:
+            gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+            gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+    GatewayResponseDefault5XX:
+      Type: 'AWS::ApiGateway::GatewayResponse'
+      Properties:
+        ResponseParameters:
+            gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+            gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        ResponseType: DEFAULT_5XX
+        RestApiId:
+          Ref: 'ApiGatewayRestApi'
+
+    

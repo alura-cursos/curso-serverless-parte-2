@@ -72,6 +72,12 @@ function App() {
             <Nav activeKey={window.location.pathname}>
               {isAuthenticated ? (
                 <>
+                  <Nav.Link eventKey="disabled" disabled>
+                    Olá{currentUser ? `, ${currentUser.name}` : ""}.
+                  </Nav.Link>
+                  <LinkContainer to="/settings/password">
+                    <Nav.Link>Configurações</Nav.Link>
+                  </LinkContainer>
                   <Nav.Link onClick={handleLogout}>Sair</Nav.Link>
                 </>
               ) : (

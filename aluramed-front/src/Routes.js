@@ -9,34 +9,43 @@ import ListPatients from "./containers/Patient/List";
 import ViewPatient from "./containers/Patient/View";
 import EditPatient from "./containers/Patient/Edit";
 import ResetPassword from "./containers/ResetPassword";
+import AuthenticatedRoute from "./components/AuthenticatedRoute";
+import UnauthenticatedRoute from "./components/UnauthenticatedRoute";
+import ChangePassword from "./containers/ChangePassword";
 
 export default function Routes() {
   return (
     <Switch>
-      <Route exact path="/">
+
+      <AuthenticatedRoute exact path="/">
         <Home />
-      </Route>
-      <Route exact path="/login">
+      </AuthenticatedRoute>
+      <UnauthenticatedRoute exact path="/login">
         <Login />
-      </Route>
-      <Route exact path="/login/reset">
+      </UnauthenticatedRoute>
+      <UnauthenticatedRoute exact path="/login/reset">
         <ResetPassword />
-      </Route>
-      <Route exact path="/signup">
+      </UnauthenticatedRoute>
+      <UnauthenticatedRoute exact path="/signup">
         <Signup />
-      </Route>
-      <Route exact path="/patients/new">
+      </UnauthenticatedRoute>
+
+      <AuthenticatedRoute exact path="/patients/new">
         <NewPatient />
-      </Route>
-      <Route exact path="/patients/:id">
+      </AuthenticatedRoute>
+      <AuthenticatedRoute exact path="/patients/:id">
         <ViewPatient />
-      </Route>
-      <Route exact path="/patients/:id/edit">
+      </AuthenticatedRoute>
+      <AuthenticatedRoute exact path="/patients/:id/edit">
         <EditPatient />
-      </Route>
-      <Route exact path="/patients">
+      </AuthenticatedRoute>
+      <AuthenticatedRoute exact path="/patients">
         <ListPatients />
-      </Route>
+      </AuthenticatedRoute>
+
+      <AuthenticatedRoute exact path="/settings/password">
+        <ChangePassword />
+      </AuthenticatedRoute>
       <Route>
         <NotFound />
       </Route>

@@ -19,7 +19,13 @@ const params = {
 };
 
 function handlerResponse(statusCode, body) {
-  let response = { statusCode }
+  let response = {
+    statusCode,
+    headers: {
+      "Access-Control-Allow-Origin": "http://localhost:3000",
+      "Access-Control-Allow-Credentials": true,
+    }
+  }
 
   if (body) {
     response['body'] = body
@@ -28,9 +34,18 @@ function handlerResponse(statusCode, body) {
   return response
 }
 
+function obterIdUsuario(event) {
+  const authProvider = event.requestContext.identity.cognitoAuthenticationProvider;
+  // cognito-idp.us-east-1.amazonaws.com/us-east-1_xxxxxxxxx,cognito-idp.us-east-1.amazonaws.com/us-east-1_aaaaaaaaa:CognitoSignIn:qqqqqqqq-1111-2222-3333-rrrrrrrrrrrr
+  const parts = authProvider.split(':');
+  const userPoolUserId = parts[parts.length - 1];
+
+  return userPoolUserId;
+}
+
 module.exports.listar = async (event) => {
   try {
-    const usuario_id = '123'
+    const usuario_id = obterIdUsuario(event)
 
     const queryString = {
       limit: 5,
@@ -89,7 +104,7 @@ module.exports.obter = async (event) => {
       .get({
         ...params,
         Key: {
-          usuario_id: '123',
+          usuario_id: obterIdUsuario(event),
           paciente_id: pacienteId,
         },
       })
@@ -124,7 +139,7 @@ module.exports.cadastrar = async (event) => {
     const { nome, data_nascimento, email, telefone } = dados;
 
     const paciente = {
-      usuario_id: '123',
+      usuario_id: obterIdUsuario(event),
       paciente_id: uuidv4(),
       nome,
       data_nascimento,
@@ -170,7 +185,7 @@ module.exports.atualizar = async (event) => {
       .update({
         ...params,
         Key: {
-          usuario_id: '123',
+          usuario_id: obterIdUsuario(event),
           paciente_id: pacienteId
         },
         UpdateExpression:
@@ -216,7 +231,7 @@ module.exports.excluir = async event => {
       .delete({
         ...params,
         Key: {
-          usuario_id: '123',
+          usuario_id: obterIdUsuario(event),
           paciente_id: pacienteId
         },
         ConditionExpression: 'attribute_exists(paciente_id)'
